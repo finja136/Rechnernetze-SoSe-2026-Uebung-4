@@ -3,30 +3,22 @@ import threading
 import sys
 
 # =========================================================
-# PEER STORAGE
-# =========================================================
-
-peers = {}
-
-
-class Peer:
-    def __init__(self, ip, port):
-        self.ip = ip
-        self.port = port
-
-
-# =========================================================
 # RECEIVE THREAD
 # =========================================================
 
 def receiver(sock):
+
     while True:
+
         try:
+
             data, addr = sock.recvfrom(4096)
+
             msg = data.decode("utf-8")
 
             print(f"\nEmpfangen von {addr[0]}:{addr[1]}")
             print(msg)
+
             print("> ", end="", flush=True)
 
         except:
@@ -47,63 +39,48 @@ def main():
     own_port = int(sys.argv[2])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     sock.bind(("0.0.0.0", own_port))
 
     print("UDP gestartet:")
     print("Name:", own_name)
     print("Port:", own_port)
 
-    threading.Thread(target=receiver, args=(sock,), daemon=True).start()
+    threading.Thread(
+        target=receiver,
+        args=(sock,),
+        daemon=True
+    ).start()
 
     while True:
 
         print("> ", end="")
+
         input_line = input().strip()
-
-        # =====================================================
-        # REGISTER
-        # =====================================================
-
-        if input_line.startswith("register "):
-
-            parts = input_line.split()
-
-            if len(parts) != 4:
-                print("Usage: register <name> <ip> <port>")
-                continue
-
-            name = parts[1]
-            ip = parts[2]
-            port = int(parts[3])
-
-            peers[name] = Peer(ip, port)
-
-            print(f"Registriert: {name}")
 
         # =====================================================
         # SEND
         # =====================================================
 
-        elif input_line.startswith("send "):
+        if input_line.startswith("send "):
 
-            parts = input_line.split(" ", 2)
+            parts = input_line.split(" ", 3)
 
-            if len(parts) != 3:
-                print("Usage: send <name> <message>")
+            if len(parts) != 4:
+                print(
+                    "Usage: send <ip> <port> <message>"
+                )
                 continue
 
-            target = parts[1]
-            message = parts[2]
+            ip = parts[1]
+            port = int(parts[2])
+            message = parts[3]
 
-            if target not in peers:
-                print("Unbekannter Kontakt.")
-                continue
+            final_msg = (
+                f"{own_name}: {message}"
+            ).encode("utf-8")
 
-            peer = peers[target]
-
-            final_msg = f"{own_name}: {message}".encode("utf-8")
-
-            sock.sendto(final_msg, (peer.ip, peer.port))
+            sock.sendto(final_msg, (ip, port))
 
         # =====================================================
         # EXIT
@@ -119,9 +96,9 @@ def main():
         # =====================================================
 
         else:
+
             print("Befehle:")
-            print("register <name> <ip> <port>")
-            print("send <name> <message>")
+            print("send <ip> <port> <message>")
             print("exit")
 
 
